@@ -62,10 +62,79 @@ Each call returns 0 for success and -1 for error unless stated otherwise.
 * exec(*file, *argvp[]) Load and execute a file with arguemnts, **only returns if error.**
 * char* sbrk(int n): grow process's memory by n bytes. **returns start of new memory**
 * open(char *file, int flags): Open a file. **Returns file descriptor**
+* write(int fd, buf, n) write N bites from buf to file descriptor **returns n*
+* pipe(int p[]) Create a pipe, put read/write file descriptors in p[0] and p[1].
 
+The exit call causes the calling process to stop executing and releases its memorry and open files. 
 
+Child process have a *copy* of the same memory as the parent, but modifying child variables won't modify parent variables and vice versa
 
+*Exec* replaces the calling process's memory with a new memory image loaded froma file stored in fs. The file must be in ELF format , which specifies where instructions, data, and start location. Instead of returning to the calling program, Exec begins running the instructios at the file start addres.
 
+inside shell, fork, wait, and exec are separate lines of code to allow for optimizations such as IO redirection.
+
+For example:
+```
+char *argv[2];
+argv[0] = "cat";
+argv[1] = 0;
+if(fork() == 0) {
+    close(0);
+    open("input.txt", O_RDONLY);
+    exec("cat", argv);
+}
+```
+# Pipes 
+A pipe is a small kernel buffer exposed to processes as a pair of file descriptors-  One for reading, one for writing. 
+
+Pipes provide a way for processes to communicate
+
+Pipes have 4 advantages over temporary files:
+* Clean themselves up
+* Can pass arbitrarily long streams of data
+* Allow for parallel execution of pipeline stages
+* Pipes' blocking reads and writes are more efficient than non blocking files
+
+# File system
+
+Filesystem provides
+* Data files: uninterpreted byte arrays
+* Directories: Named refferences to data files and other directories
+
+Directories
+- form a tree, starting at *root*, which is a special directory
+- mkdir crreates new directories
+- mknod creates new *device* file
+
+```
+mkdir("/dir");
+fd = open("/dir/file", O_CREATE|O_WRONLY);
+close(fd);
+mknod("/console", 1, 1);
+```
+Files
+* name is distinct from file itself
+* one underlying file (called inode) can have multiple names, called *links*
+* each link is an entry in a directory, each entry contains filename and reference to inode
+* Inode holds metadata about a file
+    * type (file, directory, device)
+    * length
+    * location of content on disk
+    * number of links to the file
+
+**fstat**
+* retrieves info from the inode that a FD refers to
+* fills in the struct fstat  
+
+```
+struct stat {
+int dev; // File system’s disk device
+uint ino; // Inode number
+short type; // Type of file
+short nlink; // Number of links to file
+uint64 size; // Size of file in bytes
+};
+```
 
 
 
